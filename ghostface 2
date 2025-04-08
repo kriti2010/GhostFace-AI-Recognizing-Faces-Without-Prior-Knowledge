@@ -1,0 +1,64 @@
+#another method
+import cv2
+import numpy as np
+import requests
+
+# Load image from URL
+def load_image_from_url(url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(url, headers=headers, timeout=5)
+        img_array = np.asarray(bytearray(response.content), dtype=np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        if img is None:
+            print("[ERROR] Couldn't load image. Try again.")
+        return img
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return None
+
+
+# Compare two images using histogram
+def is_image_match(img1, img2, threshold=0.9):
+    hist1 = cv2.calcHist([img1], [0], None, [256], [0, 256])
+    hist2 = cv2.calcHist([img2], [0], None, [256], [0, 256])
+    similarity = cv2.compareHist(hist1, hist2, cv2.HISTCMP_CORREL)
+    return similarity >= threshold
+
+
+# Main Code
+stored_images = []  # list of tuples (name, image)
+
+print("=== STORE MULTIPLE IMAGES FROM URL ===")
+while True:
+    url = input("Enter image URL (or 'done' to finish): ")
+    if url.lower() == 'done':
+        break
+    name = input("Enter a name for this image: ")
+    img = load_image_from_url(url)
+    if img is not None:
+        stored_images.append((name, img))
+        print(f"[INFO] Image '{name}' stored successfully!")
+    else:
+        print("[ERROR] Couldn't load image. Try again.")
+
+print("\n=== MATCH NEW IMAGE FROM URL ===")
+match_url = input("Enter URL of the image you want to match: ")
+match_img = load_image_from_url(match_url)
+
+if match_img is not None:
+    print("[INFO] Matching image loaded successfully!")
+    print(f"[INFO] Stored {len(stored_images)} images for matching.\n")
+
+    found = False
+    for name, stored_img in stored_images:
+        if is_image_match(stored_img, match_img):
+            print(f"[MATCH FOUND] Image matches with '{name}'!")
+            found = True
+            break
+
+    if not found:
+        print("[NO MATCH] No matching image found in stored images.")
+
+else:
+    print("[ERROR] Couldn't load matching image.")
